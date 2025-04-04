@@ -189,14 +189,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 
 
-<!-- CONTACT -->
-## Contact
 
-Cong Sy Nguyen - ncsyvn@gmail.com
-
-Other projects: [https://github.com/ncsyvn?tab=repositories](https://github.com/ncsyvn?tab=repositories)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 
