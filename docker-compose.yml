@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  auth_service:
+    build:
+      context: . 
+      dockerfile: auth_service/Dockerfile
+    ports:
+      - "5001:5001"
+    volumes:
+     
+      - ./auth_service:/app/auth_service
+      - ./auth_service/server.py:/app/server.py
+    environment:
+      
+      - FLASK_ENV=development # Enables debug mode, etc.
+      - AUTH_SERVICE_URL=http://auth_service:5001 
+
+  video_service:
+    build:
+      context: .
+      dockerfile: video_service/Dockerfile
+    ports:
+      - "5002:5002"
+    volumes:
+      - ./video_service:/app/video_service
+      - ./video_service/server.py:/app/server.py
+    environment:
+      - FLASK_ENV=development
+      
+      - AUTH_SERVICE_URL=http://auth_service:5001 
+
+    depends_on: 
+      - auth_service
