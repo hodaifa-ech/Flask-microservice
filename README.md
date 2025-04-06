@@ -1,218 +1,128 @@
-<!-- Improved compatibility of back to top link: See: https://github.com/ncsyvn/microservices-flask-python-example/pulls -->
-<a name="page-top"></a>
-<!--
-*** Thanks for checking out the "microservices-flask-python-example". If you have a suggestion
-*** that would make this better, please fork the repo and create a pull request
-*** or simply open an issue with the tag "enhancement".
-*** Don't forget to give the project a star!
-*** Thanks again! Now go create something AMAZING! :D
--->
+# DevOps Microservices Practice Project: Flask App on EKS
 
-
-[[Contributor]][contributors-url]
-[[Forks]][forks-url]
-[[Stargazers]][stars-url]
-[[Issues]][issues-url]
-[[MIT License]][license-url]
+This project demonstrates a full CI/CD pipeline using various DevOps tools to build, test, and deploy a Python Flask microservices application (Authentication & Video services) onto a Kubernetes cluster managed by AWS EKS. The entire infrastructure (Jenkins Server, VPC, EKS Cluster) is provisioned using Terraform.
 
 
 
-<!-- PROJECT LOGO -->
-<br />
-<div align="center">
-  <a href="https://github.com/ncsyvn/microservices-flask-python-example">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
-  </a>
+---
 
-  <h3 align="center">Microservices Flask Python Example</h3>
+## Tools Used
 
-  <p align="center">
-    Start with some basic application
-    <br />
-</p>
-</div>
+*   **Git & GitHub:** Version Control System & Source Code Management.
+*   **Terraform:** Infrastructure as Code (IaC) for provisioning all AWS resources.
+*   **AWS:** Cloud Provider (EC2, EKS, ECR, S3, DynamoDB, IAM, VPC, ELB).
+*   **Docker:** Containerization for packaging the Flask applications and dependencies.
+*   **Jenkins:** CI/CD Orchestration server, running the pipeline defined in `Jenkinsfile`.
+*   **Kubernetes (via EKS):** Container orchestration platform.
+*   **Ansible :Configuration management.
+*   **Python & Flask:** Application framework.
+*   **Gunicorn:** Production WSGI server.
+*   **Draw.io / diagrams.net:** Used for creating architecture diagrams.
 
+---
 
+## Architecture & Workflow Overview
 
-<!-- TABLE OF CONTENTS -->
-<details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#test-service">Test Service</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
-  </ol>
-</details>
+This project utilizes a combination of Infrastructure as Code (IaC), CI/CD automation, and container orchestration to deliver the microservices application.
+
+### CI/CD Pipeline Workflow
+
+The following diagram illustrates the automated pipeline triggered by code changes:
+
+![CI/CD Pipeline Diagram](./images/1.png)
 
 
+**Explanation:**
 
-<!-- ABOUT THE PROJECT -->
-## About The Project
+1.  **Trigger:** A developer pushes code changes (`git push`) to the GitHub repository.
+2.  **Jenkins Activation:** GitHub triggers Jenkins (via webhook or polling) based on the branch update.
+3.  **Pipeline Execution (Jenkins):**
+    *   **Checkout:** Jenkins checks out the latest code, including the `Jenkinsfile`.
+    *   **Setup:** Configures necessary tools (`kubectl`, `aws cli`) and logs into AWS ECR using the permissions granted by the EC2 instance's IAM Role.
+    *   **Build:** Builds Docker images for the `auth_service` and `video_service` using their respective Dockerfiles. Images are tagged uniquely (e.g., with the build number).
+    *   **(Test):** Placeholder stages for running unit, integration, or other automated tests against the built code/images.
+    *   **Push:** Pushes the tagged Docker images to AWS Elastic Container Registry (ECR).
+    *   **Deploy:** Uses `kubectl` to apply the Kubernetes manifest files (`k8s/`) to the target EKS cluster. The image tags within the Deployment manifests are updated to use the newly built images from ECR. Kubernetes then handles the rolling update.
+    *   **(Post-Deploy Test):** Placeholder stage for running end-to-end tests against the deployed application endpoint.
+4.  **Deployment:** AWS EKS pulls the new container images from ECR and updates the running application pods according to the Deployment strategy.
+
+### Cloud Infrastructure Architecture
+
+The underlying infrastructure supporting this pipeline and application deployment is provisioned on AWS using Terraform, as depicted below:
+
+![AWS Cloud Architecture Diagram](./images/2.png)
+*(**Note:** Replace `./images/cloud-architecture.png` with the correct path to your architecture image in the repository)*
+
+**Explanation:**
+
+1.  **VPC:** A dedicated Virtual Private Cloud provides network isolation. It spans multiple Availability Zones (AZs) for high availability.
+2.  **Subnets:**
+    *   **Public Subnets:** Contain resources that need direct internet access, like NAT Gateways and potentially the Jenkins server (with strict Security Groups). Connected to an Internet Gateway (IGW).
+    *   **Private Subnets:** Host the EKS Worker Nodes (EC2 instances) for enhanced security. Outbound internet access (e.g., for pulling images or OS updates) is routed through NAT Gateways located in the public subnets.
+3.  **EKS Cluster:**
+    *   **Control Plane:** Managed by AWS, interacts with worker nodes.
+    *   **Worker Nodes:** EC2 instances running in private subnets across multiple AZs, managed by an EKS Node Group. They execute the application pods.
+4.  **Jenkins Server:** An EC2 instance (provisioned via Terraform) running the Jenkins application. It has an attached IAM Role (`JenkinsEC2Role`) granting it permissions to interact with AWS services like ECR and EKS. Resides in a public or private subnet depending on configuration.
+5.  **ECR:** AWS Elastic Container Registry stores the Docker images built by the Jenkins pipeline. EKS worker nodes pull images from ECR.
+6.  **ELB:** An AWS Elastic Load Balancer (typically an Application Load Balancer) is automatically provisioned by the Kubernetes `video-service` (Type: LoadBalancer). It routes external user traffic to the `video-service` pods running on the EKS worker nodes.
+7.  **S3 & DynamoDB:** Used by Terraform as a remote backend to securely store the infrastructure state (S3) and manage state locking (DynamoDB) for collaborative and safe IaC practices.
+8.  **IAM:** AWS Identity and Access Management roles and policies are defined to grant least-privilege permissions to Jenkins, EKS, and worker nodes.
+9.  **Security Groups:** Act as virtual firewalls, controlling traffic flow between resources (e.g., allowing Jenkins to talk to the EKS API, ELB to talk to worker nodes, nodes to talk to each other).
+
+---
 
 
-This source show you a basic microservices system with python language and Flask framework.
-There are 2 mini services that connect directly with its apis:
-* Authentication service
-    * signup
-    * login
-* Video service
-    * create new video
-    * get list videos
-
-<a href="https://github.com/ncsyvn/microservices-flask-python-example/images/microservices-architecture.png">
-    <img src="images/microservices-architecture.png" alt="Architecture">
-</a>
-<p align="right">(<a href="#page-top">back to top</a>)</p>
-
-
-
-### Built With
-
-This section should list any major frameworks/libraries used for your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
-
-* [![Python][python-shield]][python-url]
-* [![Flask][flask-shield]][flask-url]
-
-<p align="right">(<a href="#page-top">back to top</a>)</p>
+## Prerequisites
 
 
 
-<!-- GETTING STARTED -->
-## Getting Started
+1.  **AWS Account:** ...
+2.  **Git & GitHub Account:** ...
+3.  **Terraform:** ...
+4.  **kubectl:** ...
+5.  **EC2 Key Pair:** ...
+6.  **S3 Bucket:** ...
+7.  **DynamoDB Table:** ...
 
-This is an example of how you may give instructions on setting up your project locally.
+---
 
-### Prerequisites
-
-This is an example of how to list things you need to use the software and how to install them.
-* [[Download python 3.7]][download-python-url]
-* [[Install pip]][install-pip-url]
-* [[Download and install mysql database]][download-mysql-url]
-* [[Download postman to testing api]][download-postman-url]
-
-  
-### Installation
-
-Below is an instruction for installing and setting up auth_service. Do the same with video_service.
-
-1. Clone the repo
-   ```sh
-   git clone https://github.com/ncsyvn/microservices-flask-python-example.git
-   ```
-2. Install library
-   ```sh
-   * Create virtual environent (venv/conda/...)
-   * Active venv in terminal
-   * pip install -r auth_service/requirements.txt
-   ```
-3. Migrate db
-
-    After migrate database successfully, we will have "migrations" folder in auth_app. 
-    Besides, in mysql db, we will see 2 new tables: user, token
-   ```sh
-   * Change database uri in settings file:
-     Example: SQLALCHEMY_DATABASE_URI = 'mysql://root:123456@127.0.0.1:3306/auth_service'
-   * Open new terminal -> Go to "auth_service/auth_app" folder
-   * cmd: 
-         1. flask db init
-         2. flask db migrate -m "message you want"
-         3. flask db upgrade  
-   ```
-
-4. Run code
-    
-    After install step 2&3 with both auth_service and video_service. 
-
-    Run 2 apps in 2 different ports (example: 5012 & 5013).
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+## Setup Instructions
 
 
 
-<!-- Test service -->
-## Test service
-This is the postman collection to testing your API
-* [[Postman collection]][postman-testing-url]
-<div align="center">
-    <h12>Create new video with valid token example</h12>
-</div>
-<a href="https://github.com/ncsyvn/microservices-flask-python-example/images/create-video-success-with-token.png">
-    <img src="images/create-video-success-with-token.png" alt="Create video success with valid token">
-</a>
-<div align="center">
-    <h12>Create new video with failed without token</h12>
-</div>
-<a href="https://github.com/ncsyvn/microservices-flask-python-example/images/create-video-failed-without-token.png">
-    <img src="images/create-video-failed-without-token.png" alt="Create video failed without">
-</a>
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+1.  **Clone Repository:** ...
+2.  **Configure AWS CLI:** ...
+3.  **Prepare Jenkins Infra Variables:** ...
+4.  **Provision Jenkins Server:** ...
+5.  **Configure Jenkins UI:** ...
+6.  **Prepare EKS Infra Variables:** ...
+7.  **Provision EKS Cluster & VPC:** ...
+8.  **Create ECR Repositories:** ...
+9.  **Create Jenkins Pipeline Job:** ...
 
+---
 
-<!-- CONTRIBUTING -->
-## Contributing
-
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
-Don't forget to give the project a star! Thanks again!
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+## Running the Pipeline
 
 
 
-<!-- LICENSE -->
-## License
+*   **Automatic Trigger:** ...
+*   **Manual Trigger:** ...
 
-Distributed under the MIT License. See `LICENSE.txt` for more information.
+---
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+## Cleaning Up
 
+To avoid ongoing AWS charges, destroy the infrastructure when you are finished:
 
-
-
-
-
-
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[python-shield]: https://img.shields.io/static/v1?label=python&message=v3.7&color=green
-[flask-shield]: https://img.shields.io/static/v1?label=flask&message=2.0.1&color=green
-[contributors-shield]: https://img.shields.io/github/contributors/ncsyvn/microservices-flask-python-example.svg?style=for-the-badge
-[contributors-url]: https://github.com/ncsyvn/microservices-flask-python-example/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/ncsyvn/microservices-flask-python-example.svg?style=for-the-badge
-[forks-url]: https://github.com/ncsyvn/microservices-flask-python-example/network/members
-[stars-shield]: https://img.shields.io/github/stars/ncsyvn/microservices-flask-python-example.svg?style=for-the-badge
-[stars-url]: https://github.com/ncsyvn/microservices-flask-python-example/stargazers
-[issues-shield]: https://img.shields.io/github/issues/ncsyvn/microservices-flask-python-example.svg?style=for-the-badge
-[issues-url]: https://github.com/ncsyvn/microservices-flask-python-example/issues
-[license-shield]: https://img.shields.io/github/license/ncsyvn/microservices-flask-python-example.svg?style=for-the-badge
-[license-url]: https://github.com/ncsyvn/microservices-flask-python-example/blob/master/LICENSE.txt
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[product-screenshot]: images/screenshot.png
-[python-url]: https://www.python.org/
-[flask-url]: https://flask.palletsprojects.com
-[download-python-url]: https://www.python.org/downloads/
-[install-pip-url]: https://pip.pypa.io/en/stable/installation/
-[download-mysql-url]: https://dev.mysql.com/downloads/installer/
-[download-postman-url]: https://www.postman.com/
-[postman-testing-url]: https://elements.getpostman.com/redirect?entityId=8820631-7d76b73e-dc98-41f1-b16e-cfafed1bd431&entityType=collection
+1.  **Destroy EKS Infrastructure:**
+    ```bash
+    cd ../eks-infra
+    terraform destroy
+    ```
+2.  **Destroy Jenkins Infrastructure:**
+    ```bash
+    cd ../jenkins-infra
+    terraform destroy -var-file=terraform.tfvars
+    ```
+3.  **Manual Cleanup:** Delete the ECR repositories, the S3 bucket contents (and bucket), and the DynamoDB table if you no longer need them. Check for any leftover Elastic IPs or Load Balancers in the EC2 console.
