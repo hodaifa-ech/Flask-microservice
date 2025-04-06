@@ -29,7 +29,7 @@ This project utilizes a combination of Infrastructure as Code (IaC), CI/CD autom
 
 The following diagram illustrates the automated pipeline triggered by code changes:
 
-![CI/CD Pipeline Diagram](./images/1.png)
+![CI/CD Pipeline Diagram](1.png)
 
 
 **Explanation:**
@@ -50,8 +50,8 @@ The following diagram illustrates the automated pipeline triggered by code chang
 
 The underlying infrastructure supporting this pipeline and application deployment is provisioned on AWS using Terraform, as depicted below:
 
-![AWS Cloud Architecture Diagram](./images/2.png)
-*(**Note:** Replace `./images/cloud-architecture.png` with the correct path to your architecture image in the repository)*
+![AWS Cloud Architecture Diagram](2.png)
+
 
 **Explanation:**
 
